@@ -19,10 +19,10 @@ func InitializeBloomFilter(ctx context.Context, client *redis.Client, bloomKey s
 		if err := client.BFReserve(ctx, bloomKey, errorRate, capacity).Err(); err != nil {
 			log.Fatalf("failed to create Bloom filter: %v", err)
 		}
-		fmt.Printf("succesfully initalized bloom filter: %v\n", bloomKey)
+		log.Printf("LOGGED HERE: Successfully initialized bloom filter: %v", bloomKey)
 	}
 	if res == 1 {
-		log.Println("clearing old Bloom filter...")
+		log.Println("LOGGED HERE: Clearing old Bloom filter...")
 		if err := client.Del(ctx, bloomKey).Err(); err != nil {
 			log.Fatal("failed to delete old BF:", err)
 		}
@@ -30,7 +30,7 @@ func InitializeBloomFilter(ctx context.Context, client *redis.Client, bloomKey s
 		if err := client.BFReserve(ctx, bloomKey, errorRate, capacity).Err(); err != nil {
 			log.Fatalf("failed to create Bloom filter: %v", err)
 		}
-		fmt.Printf("succesfully initalized bloom filter: %v\n", bloomKey)
+		log.Printf("LOGGED HERE: Successfully initialized bloom filter: %v", bloomKey)
 
 	}
 	return nil
@@ -48,6 +48,6 @@ func RedisInit(ctx context.Context) (*redis.Client, error) {
 		log.Fatalf("Failed to connect to Redis: %v. Ensure Redis is running on localhost:6379.", err)
 		return nil, err
 	}
-	log.Println("Redis connection successful")
+	log.Println("LOGGED HERE: Redis connection successful")
 	return Client, nil
 }
