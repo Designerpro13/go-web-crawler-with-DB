@@ -28,8 +28,9 @@ import (
 
 func initialUrlSeed() []string {
 	return []string{
-		"https://en.wikipedia.org/wiki/Hindus",
-		"https://www.indiatoday.in/",
+		// "https://en.wikipedia.org/wiki/Hindus",
+		// "https://www.indiatoday.in/",
+		"http://finetranscendentsublimeeclipse.neverssl.com/online/",
 	}
 }
 
@@ -275,7 +276,7 @@ func main() {
 	log.Println("LOGGED HERE: Starting optimized web crawler with PostgreSQL + Redis")
 
 	// PostgreSQL connection
-	postgresConnStr := "host=localhost port=5432 user=postgres password=postgres dbname=crawler sslmode=disable"
+	postgresConnStr := "host=localhost port=5432 user=postgres password=crawler123 dbname=crawler sslmode=disable"
 	postgresDB, err := db.PostgresInit(ctx, postgresConnStr)
 	if err != nil {
 		log.Fatal("LOGGED HERE: PostgreSQL connection failed:", err)

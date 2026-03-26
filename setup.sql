@@ -1,10 +1,5 @@
 -- PostgreSQL Setup Script for Web Crawler
-
--- Create database
-CREATE DATABASE crawler;
-
--- Connect to the database
-\c crawler;
+-- Run this inside the PostgreSQL container
 
 -- Create word_index table
 CREATE TABLE IF NOT EXISTS word_index (

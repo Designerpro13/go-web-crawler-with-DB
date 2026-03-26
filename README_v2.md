@@ -11,41 +11,59 @@ PostgreSQL + Redis Inverted Index implementation for efficient web crawling and 
 
 ## Setup
 
-### 1. PostgreSQL Setup
+### Quick Setup with Docker
 ```bash
-# Install PostgreSQL
-sudo apt-get install postgresql postgresql-contrib
-
-# Start PostgreSQL
-sudo service postgresql start
-
-# Create database and schema
-psql -U postgres -f setup.sql
+# Run automated setup
+chmod +x docker-setup.sh
+./docker-setup.sh
 ```
 
-### 2. Redis Stack Setup
+### Manual Docker Setup
+
+#### 1. Redis Stack
 ```bash
-# Pull Redis Stack
-docker pull redis/redis-stack:latest
-
-# Run Redis Stack
-docker run -d -p 6379:6379 --name redis-stack redis/redis-stack:latest
-
-# Verify
-docker ps
+docker run -d --name redis-stack -p 6379:6379 redis/redis-stack:latest
+redis-cli ping  # Should return PONG
 ```
 
-### 3. Install Dependencies
+#### 2. PostgreSQL
+```bash
+# Start PostgreSQL container
+docker run -d \
+  --name postgres-crawler \
+  -e POSTGRES_PASSWORD=crawler123 \
+  -e POSTGRES_DB=crawler \
+  -p 5432:5432 \
+  postgres:15-alpine
+
+# Create schema
+docker exec -i postgres-crawler psql -U postgres -d crawler << 'EOF'
+CREATE TABLE IF NOT EXISTS word_index (
+    id SERIAL PRIMARY KEY,
+    word VARCHAR(255) NOT NULL,
+    domain VARCHAR(255) NOT NULL,
+    frequency INTEGER DEFAULT 1,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(word, domain)
+);
+CREATE INDEX IF NOT EXISTS idx_word ON word_index(word);
+CREATE INDEX IF NOT EXISTS idx_domain ON word_index(domain);
+CREATE INDEX IF NOT EXISTS idx_frequency ON word_index(frequency DESC);
+\dt
+EOF
+```
+
+### 3. Install Go Dependencies
 ```bash
 go get github.com/lib/pq
 go get github.com/redis/go-redis/v9
 go get golang.org/x/net/html
 ```
 
-### 4. Configure PostgreSQL Connection
-Edit `main_v2.go` line 186:
+### 4. PostgreSQL Connection (Pre-configured)
+Default in `main_v2.go`:
 ```go
-postgresConnStr := "host=localhost port=5432 user=postgres password=YOUR_PASSWORD dbname=crawler sslmode=disable"
+postgresConnStr := "host=localhost port=5432 user=postgres password=crawler123 dbname=crawler sslmode=disable"
 ```
 
 ## Run
