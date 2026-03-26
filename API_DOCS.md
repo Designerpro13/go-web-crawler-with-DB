@@ -112,3 +112,91 @@ const getDomainStats = async () => {
   return response.json();
 };
 ```
+
+### 5. Get Word Postings (Redis)
+**GET** `/api/word/postings?word=<word>`
+
+Get all URL hashes where a word appears with frequencies from Redis inverted index.
+
+**Query Parameters:**
+- `word` (required): The word to lookup
+
+**Response:**
+```json
+[
+  {
+    "url_hash": "a1b2c3d4e5f6...",
+    "frequency": 15
+  },
+  {
+    "url_hash": "f6e5d4c3b2a1...",
+    "frequency": 8
+  }
+]
+```
+
+### 6. Get Top Words
+**GET** `/api/words/top?limit=<number>`
+
+Get the most frequent words across all domains.
+
+**Query Parameters:**
+- `limit` (optional): Number of results (default: 50)
+
+**Response:**
+```json
+[
+  {
+    "word": "the",
+    "frequency": 15000
+  },
+  {
+    "word": "example",
+    "frequency": 8500
+  }
+]
+```
+
+### 7. Get Word Frequency by Domain
+**GET** `/api/word/domains?word=<word>`
+
+Get frequency of a specific word across different domains.
+
+**Query Parameters:**
+- `word` (required): The word to lookup
+
+**Response:**
+```json
+[
+  {
+    "domain": "example.com",
+    "frequency": 250
+  },
+  {
+    "domain": "example.org",
+    "frequency": 120
+  }
+]
+```
+
+## New JavaScript Examples
+
+```javascript
+// Get word postings from Redis
+const getWordPostings = async (word) => {
+  const response = await fetch(`http://localhost:8080/api/word/postings?word=${word}`);
+  return response.json();
+};
+
+// Get top words
+const getTopWords = async (limit = 50) => {
+  const response = await fetch(`http://localhost:8080/api/words/top?limit=${limit}`);
+  return response.json();
+};
+
+// Get word frequency by domain
+const getWordByDomain = async (word) => {
+  const response = await fetch(`http://localhost:8080/api/word/domains?word=${word}`);
+  return response.json();
+};
+```

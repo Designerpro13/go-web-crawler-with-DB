@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github/yeshu2004/go-epics/crawler"
@@ -12,9 +13,10 @@ import (
 )
 
 type Server struct {
-	PostgresDB *db.PostgresDB
-	Crawler    *crawler.Crawler
-	mu         sync.Mutex
+	PostgresDB   *db.PostgresDB
+	RedisQueries *db.RedisQueries
+	Crawler      *crawler.Crawler
+	mu           sync.Mutex
 }
 
 type CrawlRequest struct {
@@ -31,10 +33,11 @@ type StatsResponse struct {
 	Duplicates int64 `json:"duplicates"`
 }
 
-func NewServer(postgresDB *db.PostgresDB, crawler *crawler.Crawler) *Server {
+func NewServer(postgresDB *db.PostgresDB, redisQueries *db.RedisQueries, crawler *crawler.Crawler) *Server {
 	return &Server{
-		PostgresDB: postgresDB,
-		Crawler:    crawler,
+		PostgresDB:   postgresDB,
+		RedisQueries: redisQueries,
+		Crawler:      crawler,
 	}
 }
 
@@ -45,6 +48,9 @@ func (s *Server) Start(port string) error {
 	mux.HandleFunc("/api/search", s.enableCORS(s.handleSearch))
 	mux.HandleFunc("/api/stats", s.enableCORS(s.handleStats))
 	mux.HandleFunc("/api/domains", s.enableCORS(s.handleDomains))
+	mux.HandleFunc("/api/word/postings", s.enableCORS(s.handleWordPostings))
+	mux.HandleFunc("/api/words/top", s.enableCORS(s.handleTopWords))
+	mux.HandleFunc("/api/word/domains", s.enableCORS(s.handleWordByDomain))
 
 	log.Printf("API Server starting on port %s", port)
 	return http.ListenAndServe(":"+port, mux)
@@ -149,4 +155,72 @@ func (s *Server) handleDomains(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
+}
+
+func (s *Server) handleWordPostings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	word := r.URL.Query().Get("word")
+	if word == "" {
+		http.Error(w, "query parameter 'word' is required", http.StatusBadRequest)
+		return
+	}
+
+	postings, err := s.RedisQueries.GetWordPostings(context.Background(), word)
+	if err != nil {
+		http.Error(w, "Failed to get word postings", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(postings)
+}
+
+func (s *Server) handleTopWords(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	limitStr := r.URL.Query().Get("limit")
+	limit := 50
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	words, err := s.PostgresDB.GetTopWords(context.Background(), limit)
+	if err != nil {
+		http.Error(w, "Failed to get top words", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(words)
+}
+
+func (s *Server) handleWordByDomain(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	word := r.URL.Query().Get("word")
+	if word == "" {
+		http.Error(w, "query parameter 'word' is required", http.StatusBadRequest)
+		return
+	}
+
+	results, err := s.PostgresDB.GetWordByDomain(context.Background(), word)
+	if err != nil {
+		http.Error(w, "Failed to get word by domain", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
 }

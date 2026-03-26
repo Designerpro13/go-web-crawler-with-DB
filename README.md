@@ -1,52 +1,91 @@
-"""
-             / | \
-        ~~~~/  |  \~~~~
-       ~~~~~   |   ~~~~~
-      ~~~~~   / \   ~~~~~
-             /___\
-             / | \
-        ~~~~/  |  \~~~~
-           /   |   \
-"""
-## Web Crawler
+# Web Crawler API
 
-A simple and efficient web crawler written in Go. This is designed for crawling web pages and following links to deepen exploration(BFS approch).
+Event-triggered web crawler with REST API, built in Go. Designed for crawling web pages with BFS approach and exposing results via HTTP endpoints.
 
 ## Features
 
-- Multi-threaded crawling for efficiency
-- Bloom Filter for Duplicates URL
-- Customizable depth and URL filtering
-- Graceful handling of robots.txt
-- Parsing HTML and extraction of links
-- Added comments for easy work flow
+- REST API for event-triggered crawling
+- Multi-threaded crawling (8 workers)
+- Bloom Filter for duplicate URL detection
+- PostgreSQL for word indexing
+- Redis for inverted index & bloom filter
+- Full-text search API
+- Real-time statistics
+- CORS enabled for frontend integration
 
+## Prerequisites
 
-## Run 
-1. **Set Up Redis Stack with Docker**:
-   - Pull the Redis Stack image:
-     ```bash
-     docker pull redis/redis-stack:latest
-     ```
-   - Run the Redis Stack container:
-     ```bash
-     docker run -d -p 6379:6379 --name redis-stack redis/redis-stack:latest
-     ```
-   - Verify the container is running:
-     ```bash
-     docker ps
-     ```
+1. **PostgreSQL** (port 5432)
+2. **Redis Stack** (port 6379)
 
-## Output
+### Quick Setup with Docker:
 
-<img width="1280" height="797" alt="Screenshot 2026-02-04 at 10 37 23 AM" src="https://github.com/user-attachments/assets/1cc98cfe-54dd-4031-b37a-cfacfcf688a5" />
+**Linux/macOS:**
+```bash
+# Redis Stack
+docker run -d -p 6379:6379 --name redis-stack redis/redis-stack:latest
 
+# PostgreSQL
+docker run -d -p 5432:5432 --name postgres \
+  -e POSTGRES_PASSWORD=crawler123 \
+  -e POSTGRES_DB=crawler \
+  postgres:latest
+```
 
-<img width="1280" height="800" alt="Screenshot 2026-02-04 at 10 37 57 AM" src="https://github.com/user-attachments/assets/4eab4f4c-13f1-4d37-8d8f-8be1fbfd668a" />
+**Windows (PowerShell/CMD):**
+```powershell
+# Redis Stack
+docker run -d -p 6379:6379 --name redis-stack redis/redis-stack:latest
 
-<img width="1017" height="200" alt="Screenshot 2026-02-04 at 10 41 31 AM" src="https://github.com/user-attachments/assets/b72150e3-d7a5-43f8-acb0-a5ddf59f1f68" />
+# PostgreSQL
+docker run -d -p 5432:5432 --name postgres -e POSTGRES_PASSWORD=crawler123 -e POSTGRES_DB=crawler postgres:latest
+```
 
-<img width="337" height="469" alt="Screenshot 2026-02-04 at 10 41 01 AM" src="https://github.com/user-attachments/assets/8c93a479-3d67-4d3d-818a-2f082906ceba" />
+> See [DOCKER_WINDOWS.md](DOCKER_WINDOWS.md) for detailed Windows setup instructions
 
+## Run
 
+```bash
+go run main.go
+```
 
+Server starts on `http://localhost:8080`
+
+## API Endpoints
+
+### Start Crawling
+```bash
+curl -X POST http://localhost:8080/api/crawl/start \
+  -H "Content-Type: application/json" \
+  -d '{"seed_urls": ["https://example.com"]}'
+```
+
+### Search Words
+```bash
+curl "http://localhost:8080/api/search?q=example"
+```
+
+### Get Statistics
+```bash
+curl http://localhost:8080/api/stats
+```
+
+### Get Domain Stats
+```bash
+curl http://localhost:8080/api/domains
+```
+
+## Frontend Integration (ViteJS)
+
+```javascript
+const startCrawl = async (urls) => {
+  const res = await fetch('http://localhost:8080/api/crawl/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ seed_urls: urls })
+  });
+  return res.json();
+};
+```
+
+See [API_DOCS.md](API_DOCS.md) for complete API documentation.

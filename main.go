@@ -15,7 +15,7 @@ import (
 const (
 	expected  = 10000000
 	fp_rate   = 0.001
-	bfKey     = "wiki_bf_2025"
+	bfKey     = "filter_bloom"
 	batchSize = 100
 )
 
@@ -50,8 +50,9 @@ func main() {
 	processor := indexer.NewProcessor(invertedIdx, postgresDB, batchSize)
 
 	crawlerInstance := crawler.New(postgresDB, rdb, processor)
+	redisQueries := db.NewRedisQueries(rdb)
 
-	server := api.NewServer(postgresDB, crawlerInstance)
+	server := api.NewServer(postgresDB, redisQueries, crawlerInstance)
 
 	go func() {
 		c := make(chan os.Signal, 1)
