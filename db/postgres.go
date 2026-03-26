@@ -82,7 +82,7 @@ func (p *PostgresDB) BatchUpsertWords(ctx context.Context, postings []WordPostin
 
 	for _, p := range postings {
 		if _, err := prepStmt.ExecContext(ctx, p.Word, p.Domain, p.Frequency); err != nil {
-			log.Printf("LOGGED HERE: Failed to upsert word=%s domain=%s: %v", p.Word, p.Domain, err)
+			//log.Printf("LOGGED HERE: Failed to upsert word=%s domain=%s: %v", p.Word, p.Domain, err)
 			continue
 		}
 	}
@@ -91,7 +91,7 @@ func (p *PostgresDB) BatchUpsertWords(ctx context.Context, postings []WordPostin
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	log.Printf("LOGGED HERE: Batch upserted %d word postings to PostgreSQL", len(postings))
+	//log.Printf("LOGGED HERE: Batch upserted %d word postings to PostgreSQL", len(postings))
 	return nil
 }
 

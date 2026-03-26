@@ -31,6 +31,7 @@ type Crawler struct {
 
 	duplicateCount atomic.Int64
 	crawledCount   atomic.Int64
+	status         atomic.Value // stores string: "idle", "running", "completed"
 	queue          chan string
 	wg             sync.WaitGroup
 	client         *http.Client
@@ -47,7 +48,7 @@ const (
 
 func New(postgresDB *db.PostgresDB, redisDB *redis.Client, processor *indexer.Processor) *Crawler {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Crawler{
+	c := &Crawler{
 		PostgresDB: postgresDB,
 		RedisDB:    redisDB,
 		Processor:  processor,
@@ -56,9 +57,13 @@ func New(postgresDB *db.PostgresDB, redisDB *redis.Client, processor *indexer.Pr
 		ctx:        ctx,
 		cancel:     cancel,
 	}
+	c.status.Store("idle")
+	return c
 }
 
 func (c *Crawler) Start(seedURLs []string) error {
+	c.status.Store("running")
+	
 	for _, seed := range seedURLs {
 		if !c.seenBefore(seed) {
 			c.markSeen(seed)
@@ -72,11 +77,15 @@ func (c *Crawler) Start(seedURLs []string) error {
 		go c.worker()
 	}
 
+	// Monitor queue and mark completed when empty
+	go c.monitorCompletion()
+
 	return nil
 }
 
 func (c *Crawler) Stop() {
 	log.Println("Stopping crawler...")
+	c.status.Store("idle")
 	c.cancel()
 	close(c.queue)
 	c.wg.Wait()
@@ -84,8 +93,14 @@ func (c *Crawler) Stop() {
 	log.Println("Crawler stopped")
 }
 
-func (c *Crawler) GetStats() (crawled, duplicates int64) {
-	return c.crawledCount.Load(), c.duplicateCount.Load()
+func (c *Crawler) GetStats() (status string, crawled, duplicates, queueSize int64) {
+	statusVal := c.status.Load()
+	if statusVal == nil {
+		status = "idle"
+	} else {
+		status = statusVal.(string)
+	}
+	return status, c.crawledCount.Load(), c.duplicateCount.Load(), int64(len(c.queue))
 }
 
 func (c *Crawler) worker() {
@@ -279,4 +294,23 @@ func resolveURL(href string, base *url.URL) string {
 		resolved.Path = strings.TrimSuffix(resolved.Path, "/")
 	}
 	return resolved.String()
+}
+
+func (c *Crawler) monitorCompletion() {
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		default:
+			time.Sleep(2 * time.Second)
+			if len(c.queue) == 0 && c.status.Load() == "running" {
+				time.Sleep(5 * time.Second) // Wait to ensure no new URLs
+				if len(c.queue) == 0 {
+					c.status.Store("completed")
+					log.Println("Crawl completed - queue empty")
+					return
+				}
+			}
+		}
+	}
 }

@@ -52,15 +52,22 @@ Search for words in the indexed database.
 ### 3. Get Crawl Statistics
 **GET** `/api/stats`
 
-Get current crawling statistics.
+Get current crawling statistics and status.
 
 **Response:**
 ```json
 {
+  "status": "running",
   "crawled": 1234,
-  "duplicates": 567
+  "duplicates": 567,
+  "queue_size": 45
 }
 ```
+
+**Status Values:**
+- `idle` - Crawler not running
+- `running` - Actively crawling
+- `completed` - Crawl finished (queue empty)
 
 ### 4. Get Domain Statistics
 **GET** `/api/domains`
@@ -104,6 +111,12 @@ const searchWords = async (query) => {
 const getStats = async () => {
   const response = await fetch('http://localhost:8080/api/stats');
   return response.json();
+};
+
+// Check if crawl is completed
+const isCrawlComplete = async () => {
+  const stats = await getStats();
+  return stats.status === 'completed' || stats.queue_size === 0;
 };
 
 // Get domain stats

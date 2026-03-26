@@ -29,8 +29,10 @@ type CrawlResponse struct {
 }
 
 type StatsResponse struct {
-	Crawled    int64 `json:"crawled"`
-	Duplicates int64 `json:"duplicates"`
+	Status     string `json:"status"`
+	Crawled    int64  `json:"crawled"`
+	Duplicates int64  `json:"duplicates"`
+	QueueSize  int64  `json:"queue_size"`
 }
 
 func NewServer(postgresDB *db.PostgresDB, redisQueries *db.RedisQueries, crawler *crawler.Crawler) *Server {
@@ -130,11 +132,13 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	crawled, duplicates := s.Crawler.GetStats()
+	status, crawled, duplicates, queueSize := s.Crawler.GetStats()
 
 	resp := StatsResponse{
+		Status:     status,
 		Crawled:    crawled,
 		Duplicates: duplicates,
+		QueueSize:  queueSize,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
